@@ -1,0 +1,864 @@
+---
+title: "Swire Coca Cola Exploratory Data Analysis"
+author: "Varun Selvam"
+date: "2025-23-01"
+output: 
+  html_document:
+    theme: flatly
+    df_print: paged
+    toc: true
+    toc_float:
+      smooth_scroll: true
+execute:
+  include: true
+  eval: true    
+  warning: false
+  message: false
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+# EDA Overview
+
+**Background:**
+
+SCCU(Swire Coca-Cola United States) tries to optimize logistics by transitioning customers selling below a specific annual volume to an Alternate Route to Market (ARTM). There is an annual 400 gallons volume threshold used to distinguish between the direct delivery route and ARTM. However, SCCU is looking for a more cost-efficient strategy to decide new threshold for optimizing logistics which is driving better operational efficiency and more revenues.
+
+**Requirement:**
+
+1.  The analysis will focus on classifying which customers must be included in ARTM or Direct route, and which volume threshold would be optimal to decide for the classification.
+
+2.  The analysis will focus on two key customer segments.
+
+-   1st Group: Local Market Partners that buy fountains only: Customers who buy only fountain drinks and no CO2, cans, or bottles.
+-   2nd Group: This group includes all customers, regardless of whether they are local market partners or not, and includes those purchasing CO2, cans, bottles, or fountain drinks.
+
+**Questions:**
+
+-   What factors or characteristics distinguish customers with annual sales exceeding the determined volume threshold from those below this threshold?
+-   How can SCCU uses historical sales data, or other Customer Characteristics to predict which ARTM customers have the potential to grow beyond the volume threshold annually?
+-   How can these insights be integrated into the routing strategy to support long-term growth while maintaining logistical efficiency?
+-   What levers can be employed to accelerate volume and share growth at growth-ready, high-potential customers?
+
+## Import libraries
+
+```{r, warning= FALSE}
+# import libraries
+library(tidyverse)
+library(janitor)
+library(skimr)
+library(psych)
+library(glue)
+library(here)
+library(readxl)
+library(zipcodeR)
+```
+
+## Import Datasets
+
+-   There are 4 datasets used for the analysis, which contains address, customer profile, delivery cost, and transaction history.
+
+```{r, warning= FALSE, message = FALSE}
+# Create a variable that contains all of the data files
+directory = "C:\\Users\\varun\\Box Sync\\Business Analytics Degree\\Semesters\\Spring Semester 2025\\IS 6813\\Data"
+
+# Get the directory for all the files
+files <- list.files(directory,full.names = TRUE)
+
+# Create Empty List to store all the files
+data <- list()
+
+# Loop through each file
+for (i in files) {
+  # Check if the file is a CSV
+  if (grepl("\\.csv$", i)) {
+    # Read the CSV file
+    a <- read_csv(i)
+    # Process the data by only extracting the name of the file and not the full file path
+    file_name <- basename(i)
+    data[[file_name]] <- a
+  }
+  # Check if the file is an excel file
+  else if (grepl("\\.xlsx$",i)) {
+    b <- read_excel(i)
+    # Process the data by only extracting the name of the file and not the full file path
+    file_name_01 <- basename(i)
+    data[[file_name_01]] <- b
+  }
+  # If the file is neither csv or excel, exit the loop
+  else {
+    # Ignore the file if it's not a CSV
+    next
+  }
+}
+
+# Extract the dataframes from the "data" list
+address_df <- data[["customer_address_and_zip_mapping.csv"]]
+profile_df <- data[["customer_profile.csv"]]
+trans_df <- data[["transactional_data.csv"]]
+delivery_cost_df <- data[["delivery_cost_data.xlsx"]]
+
+# Remove intermediate variables used when reading in the functions
+rm(a)
+rm(b)
+rm(directory)
+rm(file_name)
+rm(file_name_01)
+rm(files)
+rm(i)
+rm(data)
+
+```
+
+## Dataset Profiling & Exploration
+
+### 1. Address Dataset Profile
+
+Variables can be described as below.
+
+-   Zip: ZIP code for the location.
+-   Full address: Full address information seperated by , including city, state, county, region, and latitude/longitude.
+-   Full address is listed in the order of zipcode, city, state full name, state acronym, county, FIPS codes, latitude, longitude
+
+```{r}
+sample_n(address_df, 10)
+```
+
+### 2. Customer Profile Dataset Profile
+
+Variables can be described as below.
+
+-   Customer Number: Unique identifying number of customer
+-   Primary Group Number: The group number of which customer mainly belongs to
+-   Frequent Order Type: The order type that customer mainly uses
+-   First Delivery Date: The date that first delivery was made
+-   On Boarding Date: The date that first transaction was made
+-   Cold Drink Channel: General channel category for cold drink purchases (e.g., "DINING")
+-   Trade Channel: Detailed channel classification (e.g., "OTHER DINING & BEVERAGE")
+-   Sub Trade Channel: Sub-classification within the trade channel (e.g., "OTHER DINING")
+-   Local Market Partner: Whether customer is local market partner (True or False)
+-   CO2 Customer: Whether customer purchases CO2 product or not (True or False)
+-   Zip Code: customer address zip code which is connected with Zip variable in `address_df`
+
+```{r}
+sample_n(profile_df,10)
+```
+
+### 3. Delivery Cost Dataset Profile
+
+Variables can be described as below.
+
+-   Cold Drink Channel: The main functional category of commerce
+-   Vol Range: The annual volume range of products
+-   Applicable to: which category of products that volumes apply to
+-   Median Delivery Cost: Median cost of delivery per cost type
+-   Cost type: the unit by measuring the cost
+-   Fountain → Measured in gallons (Per Gallon)
+-   Bottles and Cans → Measured in cases (Per Case).
+
+```{r}
+delivery_cost_df
+```
+
+### 4. Transaction Dataset Profile
+
+Variables can be described as below.
+
+-   Transaction Date: Date of the transaction (YYYY-MM-DD format).
+-   Week: Week number of the year when the transaction occurred.
+-   Year: Year of the transaction occurred.
+-   Customer Number: Unique identifier for the customer.
+-   Order Type: Type of order placed
+-   Ordered Cases: The amount of cases that ordered
+-   Loaded Cases: The amount of cases that loaded in the truck
+-   Delivered Cases: The amount of cases that delivered to the customer
+-   Ordered Gallons: The amount of gallons that ordered
+-   Loaded Gallons: The amount of gallons that loaded in the truck
+-   Delivered Gallons: The amount of gallons that delivered to the customer
+-   **Information 1**: One standard physical case equating to one gallon, allowing for a direct summation of cases and gallons.
+-   **Information 2**: Negative delivered volume must be considered as a return.
+
+```{r}
+sample_n(trans_df,10)
+```
+
+## Skimming of Dataset
+
+```{r}
+skim(address_df)
+skim(profile_df)
+skim(delivery_cost_df)
+skim(trans_df)
+```
+
+## Checking NA per variable
+
+```{r}
+colSums(is.na(address_df))
+colSums(is.na(profile_df))
+colSums(is.na(delivery_cost_df))
+colSums(is.na(trans_df))
+
+colSums(is.na(address_df)) / nrow(address_df) * 100
+colSums(is.na(profile_df)) / nrow(profile_df) * 100
+colSums(is.na(delivery_cost_df)) / nrow(delivery_cost_df) * 100
+colSums(is.na(trans_df)) / nrow(trans_df) * 100
+```
+
+-   `PRIMARY_GROUP_NUMBER` has a 18196 missing values, which takes up 60% of `profile_df` dataset.
+
+## The list of EDA questions
+
+-   How many customers are partnered with Local Market Partners out of the entire customers?
+-   How many customers are purchasing C02 products out of entire customers?
+-   Which number can we extract out of transaction history?
+-   How many customers belongs to the direct route based on the original volume threshold? And how many customers belong to the ARTM based on the original volume threshold?
+-   Which customer characteristics have brought more profits from given transaction data?
+    -   CO2 vs Non-CO2
+    -   Local Market Partners vs Non-Local Market Partners
+    -   Cold Drink Channel
+    -   Frequent Order Type
+-   How many customers belongs to the Local Market Partners that buy fountains only? (Group Segment 1)
+-   
+
+### The summary table of Local Market Partner Customer
+
+```{r}
+# the distribution of local market partner customers out of entire customers
+table(profile_df$LOCAL_MARKET_PARTNER)
+round(prop.table(table(profile_df$LOCAL_MARKET_PARTNER)),2)
+```
+
+Approximately, 90% of listed customers belong to the local market partners, which indicates that they are smaller, regionally focused customers who serve their local communities. They tend to show their reliance on local market dynamics and consistent purchasing patterns.
+
+### The summary table of of CO2 customer
+
+```{r}
+# the distribution of CO2 customers out of entire customers
+table(profile_df$CO2_CUSTOMER)
+round(prop.table(table(profile_df$CO2_CUSTOMER)),2)
+```
+
+Approximately, 40% of listed customer belongs to the CO2 customer, which represents that they have purchased carbon dioxide materials.
+
+### Total number of transaction
+
+-   Total number of customer
+-   Total volume of cases
+-   Total volume of gallons
+-   Total transaction period
+
+```{r}
+trans_df %>%
+  summarise(customer_n = n_distinct(CUSTOMER_NUMBER))
+
+trans_df %>%
+  summarise(case_volume = sum(ORDERED_CASES),
+            gallon_volume = sum(ORDERED_GALLONS),
+            total_volume = case_volume + gallon_volume)
+```
+
+```{r}
+max(as.Date(trans_df$TRANSACTION_DATE, format="%m/%d/%Y"))
+min(as.Date(trans_df$TRANSACTION_DATE, format="%m/%d/%Y"))
+```
+
+30322 customers have transacted 28,074,470 cases and 10,323,337 gallons (total 38,397,807 units) with SCCU from 1/1/2023 to 12/31/2024. (2 years)
+
+```{r}
+trans_history <-
+trans_df %>%
+  mutate(TRANSACTION_DATE = as.Date(TRANSACTION_DATE, format="%m/%d/%Y")) %>%
+  group_by(CUSTOMER_NUMBER) %>%
+  summarise(
+            FIRST_TRANSACTION_DATE = min(TRANSACTION_DATE),
+            LAST_TRANSACTION_DATE = max(TRANSACTION_DATE),
+            TRANS_DAYS = LAST_TRANSACTION_DATE - FIRST_TRANSACTION_DATE + 1,
+            TRANS_COUNT = n(),
+            TRANS_COUNT_2023 = sum((year(TRANSACTION_DATE) == 2023)),
+            TRANS_COUNT_2024 = sum((year(TRANSACTION_DATE) == 2024)),
+            ANNUAL_VOLUME_CASES_2023 = sum((year(TRANSACTION_DATE) == 2023) * ORDERED_CASES, na.rm = TRUE),
+            ANNUAL_VOLUME_GALLON_2023 = sum((year(TRANSACTION_DATE) == 2023) * ORDERED_GALLONS, na.rm = TRUE),
+            ANNUAL_VOLUME_CASES_2024 = sum((year(TRANSACTION_DATE) == 2024) * ORDERED_CASES, na.rm = TRUE),
+            ANNUAL_VOLUME_GALLON_2024 = sum((year(TRANSACTION_DATE) == 2024) * ORDERED_GALLONS, na.rm = TRUE),
+            ANNUAL_VOLUME_2023 = sum((year(TRANSACTION_DATE) == 2023) * (ORDERED_CASES + ORDERED_GALLONS), na.rm = TRUE),
+            AVG_ORDER_VOLUME_2023 = ANNUAL_VOLUME_2023 / TRANS_COUNT_2023,
+            ANNUAL_VOLUME_2024 = sum((year(TRANSACTION_DATE) == 2024) * (ORDERED_CASES + ORDERED_GALLONS), na.rm = TRUE),
+            AVG_ORDER_VOLUME_2024 = ANNUAL_VOLUME_2024 / TRANS_COUNT_2024,
+            CHANGED_VOLUME = ANNUAL_VOLUME_2024 - ANNUAL_VOLUME_2023,
+            PERCENT_CHANGE = round(CHANGED_VOLUME/ANNUAL_VOLUME_2023,2) * 100,
+            THRESHOLD_2023 = ifelse(ANNUAL_VOLUME_2023 >= 400, 'above', 'below'),
+            THRESHOLD_2024 = ifelse(ANNUAL_VOLUME_2024 >= 400, 'above', 'below'),
+  ) %>%
+  ungroup()
+
+trans_history
+```
+
+```{r}
+colSums(is.na(trans_history))
+```
+
+-   calculation of ANNUAL_VOLUME = AVG_ORDER_VOLUME (Order Volume) \* TRANS_COUNT (Frequency) for certain year (2023 vs 2024)
+
+```{r}
+# 2023 above vs below threshold
+table(trans_history$THRESHOLD_2023)
+prop.table(table(trans_history$THRESHOLD_2023))
+
+# 2024 above vs below threshold
+table(trans_history$THRESHOLD_2024)
+prop.table(table(trans_history$THRESHOLD_2024))
+```
+
+-   approximately, 25% of customers are above the original volume threshold (400 annual volume), whereas 75% remains below the threshold in both 2023 and 2024. It appears that the proportion of customer group haven't changed much.
+
+```{r}
+thres_change_customer <-
+trans_history %>%
+  filter(THRESHOLD_2023 != THRESHOLD_2024)
+
+thres_change_customer
+```
+
+```{r}
+table(thres_change_customer$THRESHOLD_2023, thres_change_customer$THRESHOLD_2024)
+round(prop.table(table(thres_change_customer$THRESHOLD_2023, thres_change_customer$THRESHOLD_2024)),2)
+```
+
+However, when we get into the depth of data, 2,378 (8%) customers experienced a change in volume based on the original volume threshold from 2023 to 2024 out of 30,322 customers. Among them, 1,250 customers (around 4%) exceeded the threshold in 2024 from below threshold status, whereas 1,128 (around 4%) customers drops below the threshold.
+
+## Volume changes comparison
+
+### Changed volume statistics
+
+```{r}
+# total customer growth statistics
+trans_history %>%
+  summarise(AVG_CHANGE_VOL = mean(CHANGED_VOLUME),
+            MED_CHANGE_VOL = median(CHANGED_VOLUME),
+            MIN_CHANGE_VOL = min(CHANGED_VOLUME),
+            MAX_CHANGE_VOL = max(CHANGED_VOLUME))
+
+# below in both year growth statistics
+
+trans_history %>%
+  filter(THRESHOLD_2023 == 'below' & THRESHOLD_2024 == 'below') %>%
+  summarise(AVG_CHANGE_VOL = mean(CHANGED_VOLUME),
+            MED_CHANGE_VOL = median(CHANGED_VOLUME),
+            MIN_CHANGE_VOL = min(CHANGED_VOLUME),
+            MAX_CHANGE_VOL = max(CHANGED_VOLUME))
+
+# above in both year growth statistics
+
+trans_history %>%
+  filter(THRESHOLD_2023 == 'above' & THRESHOLD_2024 == 'above') %>%
+  summarise(AVG_CHANGE_VOL = mean(CHANGED_VOLUME),
+            MED_CHANGE_VOL = median(CHANGED_VOLUME),
+            MIN_CHANGE_VOL = min(CHANGED_VOLUME),
+            MAX_CHANGE_VOL = max(CHANGED_VOLUME))
+
+# potential growth customer statistics
+trans_history %>%
+  filter(THRESHOLD_2023 == 'below' & THRESHOLD_2024 == 'above') %>%
+  summarise(AVG_CHANGE_VOL = mean(CHANGED_VOLUME),
+            MED_CHANGE_VOL = median(CHANGED_VOLUME),
+            MIN_CHANGE_VOL = min(CHANGED_VOLUME),
+            MAX_CHANGE_VOL = max(CHANGED_VOLUME))
+```
+
+### Changes in volume percent distribution
+
+```{r}
+# total customer
+trans_history %>%
+  ggplot() +
+  geom_boxplot(aes(x = PERCENT_CHANGE)) +
+  theme_minimal()
+
+# both below customer
+trans_history %>%
+  filter(THRESHOLD_2023 == 'below' & THRESHOLD_2024 == 'below') %>%
+  ggplot() +
+  geom_boxplot(aes(x = PERCENT_CHANGE), na.rm = TRUE) +
+  theme_minimal()
+
+# both above customer
+trans_history %>%
+  filter(THRESHOLD_2023 == 'below' & THRESHOLD_2024 == 'below') %>%
+  ggplot() +
+  geom_boxplot(aes(x = PERCENT_CHANGE), na.rm = TRUE) +
+  theme_minimal()
+
+# potential growth customer
+trans_history %>%
+  filter(THRESHOLD_2023 == 'below' & THRESHOLD_2024 == 'above') %>%
+  ggplot() +
+  geom_boxplot(aes(x = PERCENT_CHANGE)) +
+  theme_minimal()
+```
+
+### Combining the Dataset (Data Modeling)
+
+In order to take in-depth analysis per each of customer's attributes, we've combined the customer profile `profile_df` data with `trans_history` , joined by `CUSTOMER_NUMBER` variable.
+
+```{r}
+trans_profile_df <- left_join(trans_history, profile_df, by = 'CUSTOMER_NUMBER')
+sample_n(trans_profile_df,10)
+```
+
+### Local Market Partner Comparison
+
+```{r}
+volume_2023 <- sum(trans_profile_df$ANNUAL_VOLUME_2023, na.rm = TRUE)
+volume_2024 <- sum(trans_profile_df$ANNUAL_VOLUME_2024, na.rm = TRUE)
+
+trans_profile_df %>%
+  group_by(LOCAL_MARKET_PARTNER) %>%
+  summarise(TOTAL_VOL_2023 = sum(ANNUAL_VOLUME_2023),
+            TOTAL_VOL_2024 = sum(ANNUAL_VOLUME_2024),
+            PERCENT_2023 = (TOTAL_VOL_2023 / volume_2023) * 100,
+            PERCENT_2024 = (TOTAL_VOL_2024 / volume_2024) * 100,
+            AVG_VOL_2023 = mean(ANNUAL_VOLUME_2023),
+            AVG_VOL_2024 = mean(ANNUAL_VOLUME_2024),
+            MED_VOL_2023 = median(ANNUAL_VOLUME_2023),
+            MED_VOL_2024 = median(ANNUAL_VOLUME_2024),
+            COUNT_2023 = sum(TRANS_COUNT_2023),
+            COUNT_2024 = sum(TRANS_COUNT_2024),
+            ABOVE_THRES_2023 = sum(THRESHOLD_2023 == 'above'),
+            ABOVE_THRES_2024 = sum(THRESHOLD_2024 == 'above')
+  )
+```
+
+### C02 customer Comparison
+
+```{r}
+trans_profile_df %>%
+  group_by(CO2_CUSTOMER) %>%
+  summarise(TOTAL_VOL_2023 = sum(ANNUAL_VOLUME_2023),
+            TOTAL_VOL_2024 = sum(ANNUAL_VOLUME_2024),
+            PERCENT_2023 = (TOTAL_VOL_2023 / volume_2023) * 100,
+            PERCENT_2024 = (TOTAL_VOL_2024 / volume_2024) * 100,
+            AVG_VOL_2023 = mean(ANNUAL_VOLUME_2023),
+            AVG_VOL_2024 = mean(ANNUAL_VOLUME_2024),
+            MED_VOL_2023 = median(ANNUAL_VOLUME_2023),
+            MED_VOL_2024 = median(ANNUAL_VOLUME_2024),
+            COUNT_2023 = sum(TRANS_COUNT_2023),
+            COUNT_2024 = sum(TRANS_COUNT_2024),
+            ABOVE_THRES_2023 = sum(THRESHOLD_2023 == 'above'),
+            ABOVE_THRES_2024 = sum(THRESHOLD_2024 == 'above')
+  )
+```
+
+### Frequent order type Comparison
+
+```{r}
+trans_profile_df %>%
+  group_by(FREQUENT_ORDER_TYPE) %>%
+  summarise(TOTAL_VOL_2023 = sum(ANNUAL_VOLUME_2023),
+            TOTAL_VOL_2024 = sum(ANNUAL_VOLUME_2024),
+            PERCENT_2023 = (TOTAL_VOL_2023 / volume_2023) * 100,
+            PERCENT_2024 = (TOTAL_VOL_2024 / volume_2024) * 100,
+            AVG_VOL_2023 = mean(ANNUAL_VOLUME_2023),
+            AVG_VOL_2024 = mean(ANNUAL_VOLUME_2024),
+            MED_VOL_2023 = median(ANNUAL_VOLUME_2023),
+            MED_VOL_2024 = median(ANNUAL_VOLUME_2024),
+            COUNT_2023 = sum(TRANS_COUNT_2023),
+            COUNT_2024 = sum(TRANS_COUNT_2024),
+            ABOVE_THRES_2023 = sum(THRESHOLD_2023 == 'above'),
+            ABOVE_THRES_2024 = sum(THRESHOLD_2024 == 'above')
+  )
+```
+
+### Cold Drink Channel Comparison
+
+```{r}
+trans_profile_df %>%
+  group_by(COLD_DRINK_CHANNEL) %>%
+  summarise(TOTAL_VOL_2023 = sum(ANNUAL_VOLUME_2023),
+            TOTAL_VOL_2024 = sum(ANNUAL_VOLUME_2024),
+            PERCENT_2023 = (TOTAL_VOL_2023 / volume_2023) * 100,
+            PERCENT_2024 = (TOTAL_VOL_2024 / volume_2024) * 100,
+            AVG_VOL_2023 = mean(ANNUAL_VOLUME_2023),
+            AVG_VOL_2024 = mean(ANNUAL_VOLUME_2024),
+            MED_VOL_2023 = median(ANNUAL_VOLUME_2023),
+            MED_VOL_2024 = median(ANNUAL_VOLUME_2024),
+            COUNT_2023 = sum(TRANS_COUNT_2023),
+            COUNT_2024 = sum(TRANS_COUNT_2024),
+            ABOVE_THRES_2023 = sum(THRESHOLD_2023 == 'above'),
+            ABOVE_THRES_2024 = sum(THRESHOLD_2024 == 'above')
+  )
+```
+
+# Zip Code Insights:
+
+Varun EDA:
+
+* How many customers are there in each State?
+* How many states does Swire Coca Cola cover?
+* What are the transactions per State? (Transactions are all of the orders that companies place in a state.)
+* What is overall volume per state?
+* What is the average volume per state?
+* What is the breakdown of **Local Market Partners** vs everyone else in each state?
+
+## Extracting States from the Zip Codes
+
+The addresses are anonymized to protect the identities of the clients. Swire Coca Cola however has provided the actual zip codes, which means that we can extract the state information from the zip codes. The code block below will extract the state information from the zip codes. 
+
+```{r}
+
+# Rename the zip column in address_df to ZIP_CODE for left join
+ address_df <- address_df %>% 
+   rename(ZIP_CODE = zip)
+
+# Do a left join and join the trans_profile_df with the address_df.
+trans_profile_address_df <- left_join(trans_profile_df,address_df,by = "ZIP_CODE")
+
+
+# Check to make sure that there are no missing values
+sum(is.na(trans_profile_address_df$`full address`))
+
+# Extract all the 4 number zip codes from the dataframe
+four_digit_zipcodes <- trans_profile_address_df %>% 
+  filter(nchar(as.character(ZIP_CODE)) == 4)
+
+# Get the count of MA
+MA = sum(grepl("Massachusetts",four_digit_zipcodes$`full address`))
+
+# Compare the count of MA to the four_digit_zipcdes df
+nrow(four_digit_zipcodes) == MA
+
+# Add leading zero for 4-digit ZIP codes
+trans_profile_address_df <- trans_profile_address_df %>%
+  mutate(ZIP_CODE = if_else(nchar(as.character(ZIP_CODE)) == 4, paste0("0", as.character(ZIP_CODE)), as.character(ZIP_CODE)))
+
+# Create a vector of Zip Codes
+Zip_Codes <- trans_profile_address_df %>% 
+  select(ZIP_CODE) %>% pull()
+
+# Create an Empty Vector which still store the state names
+state_names <- vector()
+
+# Use for loop to get state names for each zip code
+for (i in 1:length(Zip_Codes)) {
+   # Get the state for the current ZIP code
+  a <- tryCatch(reverse_zipcode(as.character(Zip_Codes[i]))$state, error = function(e) NA)  # Handle errors by assigning NA
+  
+  # Store the state in the vector
+  state_names[i] <- a
+}
+
+# Add the state vector to the dataframe
+trans_profile_address_df$State <- state_names
+
+```
+
+The states have now been successfully extracted from the zip codes and added to `trans_profile_df`
+
+## How many Customers per State
+
+```{r}
+
+# See how many unique States are in this profile
+length(unique(trans_profile_address_df$State))
+
+# See how many unique Customers are there for each state
+trans_profile_address_df %>% 
+  group_by(State) %>% 
+  summarise(n = n_distinct(CUSTOMER_NUMBER)) %>% 
+  arrange(desc(n))
+
+length(unique(trans_profile_df$CUSTOMER_NUMBER))
+
+```
+
+This dataset shows that SCCU serves 5 states which is 
+
+* Massachusetts 
+* Kansas
+* Kentucky
+* Maryland
+* Louisiana
+
+There are 30,322 customers overall and the customers per state adds up to this as well. A
+
+### Customers per State Graph
+
+```{r}
+
+trans_profile_address_df %>% 
+  group_by(State) %>% 
+  summarise(n = n_distinct(CUSTOMER_NUMBER)) %>% 
+  arrange(desc(n)) %>%  # Ensures ordering before plotting
+  ggplot(aes(x = fct_reorder(State, n), y = n, fill = State)) +  # Orders bars
+  geom_col(show.legend = FALSE,fill = "#F40009") +  # Hides legend if not needed
+  theme_minimal() +
+  coord_flip() +  # Flips for better readability
+  labs(x = "State", y = "Number of Unique Customers", title = "Customers by State")
+  
+```
+
+Visualization shows the number of unique customers in each state. Massachusetts has the highest number of customers followed by Kansas and Kentucky. Kansas and Kentucky are very close in the number of customers that are served.
+
+Finally Lousiana is last and the number of customers served in Lousiana is quite small compared to the other states.
+
+## Transaction by States
+
+```{r}
+
+trans_profile_address_df %>% 
+  group_by(State) %>% 
+  summarise(transactions = sum(TRANS_COUNT),
+            trans_2023 = sum(TRANS_COUNT_2023),
+            trans_2024 = sum(TRANS_COUNT_2024),
+            difference = trans_2024-trans_2023,
+            pctg_change = round(((trans_2024-trans_2023)/trans_2023) * 100,2)) %>%
+  arrange(desc(transactions))
+
+```
+
+This table shows the total transactions for each year per state. `trans_2023` is all the transactions that occurred in 2023 while `trans_2024` is all the transactions that occured in 2024.
+
+The `difference` column represents the change in transactions from 2023 to 2024 while `pctg_change` represents this difference as percentages.
+
+### Transactions by State Visualizations
+
+#### Yearly Transactions by State
+
+```{r}
+# Assign changes from table to new dataframe
+trans_profile_address_viz <- trans_profile_address_df %>% 
+  group_by(State) %>% 
+  summarise(transactions = sum(TRANS_COUNT),
+            trans_2023 = sum(TRANS_COUNT_2023),
+            trans_2024 = sum(TRANS_COUNT_2024),
+            difference = trans_2024 - trans_2023,
+            pctg_change = round(((trans_2024 - trans_2023) / trans_2023) * 100, 2)) %>%
+  arrange(desc(transactions)) %>%
+  pivot_longer(cols = c(trans_2023, trans_2024), # Pivot the dataframe for easier plotting
+               names_to = "Metric", values_to = "Value")
+
+
+ggplot(trans_profile_address_viz, aes(x = State, y = Value, fill = Metric)) +
+  geom_col(position = "dodge") +  # Dodge to separate bars
+  theme_minimal() +
+  labs(title = "Yearly Transaction Volume by State", 
+       y = "Transaction Volume", 
+       x = "State",
+       fill = "Transaction Type") +
+  coord_flip() + 
+  scale_fill_manual(values = c("trans_2023" = "#1E1E1E", "trans_2024" = "#F40009"),
+                    labels = c("2023 Transactions","2024 Transactions"))
+
+```
+
+This graph shows the Transaction Volume by State for 2023 and 2024.
+
+#### Transactions by State
+
+```{r}
+
+# Assign changes from table to new dataframe
+trans_profile_address_viz <- trans_profile_address_df %>% 
+  group_by(State) %>% 
+  summarise(transactions = sum(TRANS_COUNT),
+            trans_2023 = sum(TRANS_COUNT_2023),
+            trans_2024 = sum(TRANS_COUNT_2024),
+            difference = trans_2024 - trans_2023,
+            pctg_change = round(((trans_2024 - trans_2023) / trans_2023) * 100, 2)) %>%
+  arrange(desc(transactions)) %>%
+  pivot_longer(cols = c(difference), # Pivot the dataframe for easier plotting
+               names_to = "Metric", values_to = "Value")
+
+
+ggplot(trans_profile_address_viz, aes(x = State, y = Value, fill = Metric)) +
+  geom_col(position = "dodge") +  # Dodge to separate bars
+  theme_minimal() +
+  labs(title = "Difference in Yearly Transaction by State", 
+       y = "Transaction Volume", 
+       x = "State",
+       fill = "Transaction Type") +
+  scale_fill_manual(values = c("difference" = "#1E1E1E")) +
+  theme(legend.position = "none")
+
+```
+
+The bar graph shows the difference in yearly transactions between 2023 and 2024. 4 out of the 5 states saw a decline in the total amount of transactions except for Louisiana. This indicates that Louisiana may have growth potential.
+
+
+#### Percentage Change in Transactions by Year
+
+```{r}
+
+# Assign changes from table to new dataframe
+trans_profile_address_viz <- trans_profile_address_df %>% 
+  group_by(State) %>% 
+  summarise(transactions = sum(TRANS_COUNT),
+            trans_2023 = sum(TRANS_COUNT_2023),
+            trans_2024 = sum(TRANS_COUNT_2024),
+            difference = trans_2024 - trans_2023,
+            pctg_change = round(((trans_2024 - trans_2023) / trans_2023) * 100, 2)) %>%
+  arrange(desc(transactions)) %>%
+  pivot_longer(cols = c(pctg_change), # Pivot the dataframe for easier plotting
+               names_to = "Metric", values_to = "Value")
+
+
+ggplot(trans_profile_address_viz, aes(x = State, y = Value, fill = Metric)) +
+  geom_col(position = "dodge") +  # Dodge to separate bars
+  theme_minimal() +
+  labs(title = "Yearly Percentage Change in Transactions by State", 
+       y = "Percentage Change", 
+       x = "State",
+       fill = "Transaction Type") +
+  scale_fill_manual(values = c("pctg_change" = "#1E1E1E")) +
+  theme(legend.position = "none")
+
+```
+
+The bar graph shows the percentage change in yearly transactions between 2023 and 2024. 4 out of the 5 states saw a decline except for Louisiana. As previously mentioned, this shows that Louisiana may have potential for growth in the future.
+
+## Volume by States
+
+```{r}
+
+trans_profile_address_df %>% 
+  group_by(State) %>% 
+  summarise(volume_2023 = sum(ANNUAL_VOLUME_2023),
+            gal_ordered_2023 = sum(ANNUAL_VOLUME_GALLON_2023),
+            cases_ordered_2023 = sum(ANNUAL_VOLUME_CASES_2023),
+            volume_2024 = sum(ANNUAL_VOLUME_2024),
+            gal_ordered_2024 = sum(ANNUAL_VOLUME_GALLON_2024),
+            cases_ordered_2024 = sum(ANNUAL_VOLUME_CASES_2024),
+            pctg_change = round(((volume_2024-volume_2023)/volume_2023)*100,2)) %>% 
+  arrange(desc(volume_2023))
+
+
+```
+
+### Volume by State Visualizations
+
+#### Yearly Volume by State
+
+```{r}
+
+# Assign changes from table to new dataframe
+trans_profile_address_viz <- trans_profile_address_df %>% 
+  group_by(State) %>% 
+  summarise(volume_2023 = sum(ANNUAL_VOLUME_2023),
+            gal_ordered_2023 = sum(ANNUAL_VOLUME_GALLON_2023),
+            cases_ordered_2023 = sum(ANNUAL_VOLUME_CASES_2023),
+            volume_2024 = sum(ANNUAL_VOLUME_2024),
+            gal_ordered_2024 = sum(ANNUAL_VOLUME_GALLON_2024),
+            cases_ordered_2024 = sum(ANNUAL_VOLUME_CASES_2024),
+            pctg_change = round(((volume_2024-volume_2023)/volume_2023)*100,2)) %>%
+  pivot_longer(cols = c(volume_2023, volume_2024), # Pivot the dataframe for easier plotting
+               names_to = "Metric", values_to = "Value")
+
+
+ggplot(trans_profile_address_viz, aes(x = State, y = Value, fill = Metric)) +
+  geom_col(position = "dodge") +  # Dodge to separate bars
+  theme_minimal() +
+  labs(title = "Yearly Volume by State", 
+       y = "Volume", 
+       x = "State",
+       fill = "Yearly Volume") +
+  coord_flip() + 
+  scale_fill_manual(values = c("volume_2023" = "#1E1E1E", "volume_2024" = "#F40009"),
+                    labels = c("2023 Volume ","2024 Volume")) 
+    
+```
+
+The graph shows the yearly change in the annual volume of gallons ordered for 2023 and 2024. All of the states saw increases in the volume of gallons ordered from 2023 to 2024.
+
+#### Yearly Volume by State
+
+```{r}
+
+# Assign changes from table to new dataframe
+trans_profile_address_viz <- trans_profile_address_df %>% 
+  group_by(State) %>% 
+  summarise(volume_2023 = sum(ANNUAL_VOLUME_2023),
+            gal_ordered_2023 = sum(ANNUAL_VOLUME_GALLON_2023),
+            cases_ordered_2023 = sum(ANNUAL_VOLUME_CASES_2023),
+            volume_2024 = sum(ANNUAL_VOLUME_2024),
+            gal_ordered_2024 = sum(ANNUAL_VOLUME_GALLON_2024),
+            cases_ordered_2024 = sum(ANNUAL_VOLUME_CASES_2024),
+            pctg_change = round(((volume_2024-volume_2023)/volume_2023)*100,2)) %>%
+  pivot_longer(cols = c(pctg_change), # Pivot the dataframe for easier plotting
+               names_to = "Metric", values_to = "Value")
+
+
+ggplot(trans_profile_address_viz, aes(x = State, y = Value, fill = Metric)) +
+  geom_col(position = "dodge") +  # Dodge to separate bars
+  theme_minimal() +
+  labs(title = "Yearly Percentage Change in Volume by State", 
+       y = "Percentage Change", 
+       x = "State",
+       fill = "Transaction Type") +
+  scale_fill_manual(values = c("pctg_change" = "#1E1E1E")) +
+  theme(legend.position = "none")
+
+```
+
+This graph shows the yearly percentage change in volume for each of the states. Lousiana has the largest increase in volume from 2023 to 2024.
+
+## Average Volume by States
+
+```{r}
+
+trans_profile_address_df %>% 
+  group_by(State) %>%
+  summarise(avg_vol = sum(ANNUAL_VOLUME_2023 + ANNUAL_VOLUME_2024)/n(),
+            avg_vol_2023 = sum(ANNUAL_VOLUME_2023)/sum(TRANS_COUNT_2023),
+            avg_vol_2024 = sum(ANNUAL_VOLUME_2024)/sum(TRANS_COUNT_2024),
+            pctg_change = round(((avg_vol_2024 - avg_vol_2023)/avg_vol_2023)*100,2)) %>% 
+  arrange(desc(avg_vol))
+  
+```
+
+```{r}
+
+
+# Assign changes from table to new dataframe
+trans_profile_address_viz <- trans_profile_address_df %>% 
+  group_by(State) %>% 
+  summarise(volume_2023 = sum(ANNUAL_VOLUME_2023),
+            gal_ordered_2023 = sum(ANNUAL_VOLUME_GALLON_2023),
+            cases_ordered_2023 = sum(ANNUAL_VOLUME_CASES_2023),
+            volume_2024 = sum(ANNUAL_VOLUME_2024),
+            gal_ordered_2024 = sum(ANNUAL_VOLUME_GALLON_2024),
+            cases_ordered_2024 = sum(ANNUAL_VOLUME_CASES_2024),
+            pctg_change = round(((volume_2024-volume_2023)/volume_2023)*100,2)) %>%
+  pivot_longer(cols = c(pctg_change), # Pivot the dataframe for easier plotting
+               names_to = "Metric", values_to = "Value")
+
+
+ggplot(trans_profile_address_viz, aes(x = State, y = Value, fill = Metric)) +
+  geom_col(position = "dodge") +  # Dodge to separate bars
+  theme_minimal() +
+  labs(title = "Yearly Percentage Change in Volume by State", 
+       y = "Percentage Change", 
+       x = "State",
+       fill = "Transaction Type") +
+  scale_fill_manual(values = c("pctg_change" = "#1E1E1E")) +
+  theme(legend.position = "none")
+
+
+```
+
+
+# Local Transaction Partner per State Count
+
+```{r}
+
+trans_profile_address_df %>% 
+  filter(CO2_CUSTOMER != FALSE) %>% 
+  group_by(State,LOCAL_MARKET_PARTNER) %>% 
+  summarise(n = n()) 
+
+```
+
+In every state, Local Market Partners are the majority. `True` represents Local Market Partners while `False` means that they are **not** Local Market Partners.
+
+
