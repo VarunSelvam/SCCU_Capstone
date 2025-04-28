@@ -40,15 +40,22 @@ Our group's solution to the project was the following:
 
 ### 3. Geographic Focus
 **High-Priority States:**
-  - MA
-  - KS
-  - KY
-  - MD
-These 5 states comprise 62% of high-density customers
+  - Massachusetts
+  - Kansas
+  - Kentucky
+  - Maryland
+These 4 states comprise 62% of high-density customers
 
 ## Business Value
 
-The Business Value of this solution is that it enables Swire to better accurately identify which customers have the potential to exceed the threshold. For instance, focusing on "Mid-Volume" customers who consume 300-449 gallon/year is a more targetd approach. This more targeted approach will enable Swire to better identify customers who could exceed th threshold while spending less resouces. This in turn helps reduce their costs and improves logistic efficency as well.
+The Business Value of this solution is that it enables SCCU to identify potential threshold exceeding customers in a **targeted** approach. For instance, instead of analyzing **all** the customers to identify potential threshold exceeding customers, SCCU can focus marketing and sales resources on Mid-Volume Customers. These Mid-Volume Customers also have a 22% higher converstion rate of becoming permanent threshold exceeding customers compared to their 450+gallon/year cohort who may occasionally order large volumes but not frequently. This also shows that focusing on mid-volume customers is useful for SCCU since it's a more targeted approach on a group that has a higher conversion rate compared to even customers who order higher volume amounts.
+
+Furthermore, this targeted approach can be be further drilled down by also focusing on the specific Sales Channels. (Sales Channels are how the customer places an order.) For instance, customers who place orders through a Sales Representative have a 38% increase in converting customers into threshold exceeding customers. This solution when combined with the previous recomendation of targeting the Mid-Volume customers creates a distinct segment that SCCU could potentially target. Moreover, when integrated with the Geographic Focus recommendation, a comprehensive understanding of the target customer profile becomes evident.
+
+- For instance, SCCU could target Mid-Volume Customers who order through Sales Representatives and are located in Massachussets. Afterwards Account Managers and Sales Representatives would collaborate to create personalized replenishment plans via MY_COKE360 portal and provide dynamic discounting for incremental volume commitments. This consequently would help with converting the customer to a threshold exceeding customer.
+- SCCU could similarily do this for other customers as well.
+
+Finally, the Geographic Focus Recommendation shows where most of SCCU's customers are located. This is very valuable for SCCU since they can ensure that any deliveries for potential high growth customers occur in states with pre-existing customers. This will ensure that SCCU does not spend resources delivering to a few customers when those resources sould be better optimized for delivering to several customers who are located close together. As previously mentioned, the geographic location can be combined with the other recommendations to allow for more preciste targeting. (I.e the example of targeting Mid-Volume customers in MA and having the customer work with a Sales Rep and Account Manager.)
 
 ## Difficulties Encountered
 
