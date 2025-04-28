@@ -48,7 +48,7 @@ These 4 states comprise 62% of high-density customers
 
 ## Business Value
 
-The Business Value of this solution is that it enables SCCU to identify potential threshold exceeding customers in a **targeted** approach. For instance, instead of analyzing **all** the customers to identify potential threshold exceeding customers, SCCU can focus marketing and sales resources on Mid-Volume Customers. These Mid-Volume Customers also have a 22% higher converstion rate of becoming permanent threshold exceeding customers compared to their 450+gallon/year cohort who may occasionally order large volumes but not frequently. This also shows that focusing on mid-volume customers is useful for SCCU since it's a more targeted approach on a group that has a higher conversion rate compared to even customers who order higher volume amounts.
+The Business Value of this solution is that it enables SCCU to identify potential threshold exceeding customers in a **targeted** approach. For instance, instead of analyzing **all** the customers to identify potential threshold exceeding customers, SCCU can focus marketing and sales resources on Mid-Volume Customers. These Mid-Volume Customers also have a 22% higher converstion rate of becoming permanent threshold exceeding customers compared to their 450+gallon/year cohort who may occasionally order large volumes but not frequently. 
 
 Furthermore, this targeted approach can be be further drilled down by also focusing on the specific Sales Channels. (Sales Channels are how the customer places an order.) For instance, customers who place orders through a Sales Representative have a 38% increase in converting customers into threshold exceeding customers. This solution when combined with the previous recomendation of targeting the Mid-Volume customers creates a distinct segment that SCCU could potentially target. Moreover, when integrated with the Geographic Focus recommendation, a comprehensive understanding of the target customer profile becomes evident.
 
@@ -56,6 +56,14 @@ Furthermore, this targeted approach can be be further drilled down by also focus
 - SCCU could similarily do this for other customers as well.
 
 Finally, the Geographic Focus Recommendation shows where most of SCCU's customers are located. This is very valuable for SCCU since they can ensure that any deliveries for potential high growth customers occur in states with pre-existing customers. This will ensure that SCCU does not spend resources delivering to a few customers when those resources sould be better optimized for delivering to several customers who are located close together. As previously mentioned, the geographic location can be combined with the other recommendations to allow for more preciste targeting. (I.e the example of targeting Mid-Volume customers in MA and having the customer work with a Sales Rep and Account Manager.)
+
+## My Contribution
+
+I contributed to this project by creating several models to see what characteristics contribute to a customer exceeding the threshold. I achieved this with the use of Decision Trees, XGBoost Models and Logistic Regression. After I was done cleaning the data and making adjustements to ensure proper model performance, we checked what the common predictors were in all of these models. Afterwards, we picked the top most common predictors in these models which were some of the channels in the `Sales_Channel`. (The `Sales_Channel` is how customers place orders.)
+
+Additionally, I also did a segmentation utilizing a Ridge Logistic Regression model to segment customers by their probability of converting 
+
+Finally, I contributed to this project by converting the `Zip_Code` column into states to make the column more useful. Afterwards, I created visualizations to show the relationships between the customers by states, volume delivered by state along with local market partner numbers for each state. These initial visualizations were then used by my colleague for clustering analysis to help with deciding the high priority states.
 
 ## Difficulties Encountered
 
