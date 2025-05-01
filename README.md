@@ -44,6 +44,7 @@ Our group's solution to the project was the following:
   - Kansas
   - Kentucky
   - Maryland
+
 These 4 states comprise 62% of high-density customers
 
 ### 4. New Threshold
